@@ -1,0 +1,820 @@
+
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Offline BanglaTokBD</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Segoe UI,Tahoma,sans-serif}
+html,body{width:100%;height:100%;background:#000;color:#fff;overflow:hidden}
+button{cursor:pointer}
+.app-container{position:relative;width:100%;height:100%;max-width:480px;margin:auto;background:#000}
+.screen{position:absolute;inset:0 0 55px;display:none;flex-direction:column;background:#000}
+.screen.active{display:flex}
+.video-feed{position:relative;width:100%;height:100%;background:#111;display:flex;justify-content:center;align-items:center;overflow:hidden}
+.post-media{width:100%;height:100%;object-fit:contain;background:#000}
+.empty-placeholder{position:absolute;color:#aaa;text-align:center;padding:25px;font-size:14px}
+.top-nav{position:absolute;top:15px;width:100%;display:flex;justify-content:center;z-index:10;pointer-events:none}
+.for-you-text{font-size:18px;font-weight:bold;border-bottom:2px solid white;padding-bottom:4px}
+.right-actions{position:absolute;right:12px;bottom:25px;display:flex;flex-direction:column;align-items:center;gap:18px;z-index:10}
+.action-btn{background:none;border:none;color:white;display:flex;flex-direction:column;align-items:center;font-size:12px}
+.action-btn .icon{font-size:30px}
+.action-btn.liked .icon{color:#ff3155}
+.video-info{position:absolute;left:15px;bottom:25px;right:85px;z-index:10;text-shadow:0 1px 4px black}
+.video-info h3{font-size:14px;margin-bottom:5px}
+.video-info p{font-size:14px;color:white;white-space:pre-wrap}
+.share-menu,.comment-box{position:absolute;bottom:0;width:100%;background:#222;padding:20px;display:none;flex-direction:column;gap:12px;border-radius:18px 18px 0 0;z-index:50}
+.share-menu button{padding:13px;border:0;border-radius:8px;background:#333;color:white;font-size:15px}
+.comment-box{height:60%;background:#181818}
+.comment-list{flex:1;overflow-y:auto;margin:12px 0;font-size:14px}
+.comment-input-area{display:flex;gap:8px}
+.comment-input-area input{flex:1;min-width:0;padding:12px;background:#333;border:0;color:white;border-radius:8px}
+.comment-input-area button{background:#fe2c55;border:0;color:white;padding:10px 16px;border-radius:8px}
+.profile-screen{background:#101010;align-items:center;text-align:center;padding:60px 20px}
+.avatar-circle{width:95px;height:95px;background:linear-gradient(135deg,#25f4ee,#fe2c55);border-radius:50%;display:flex;justify-content:center;align-items:center;font-size:40px;font-weight:bold;margin-bottom:15px}
+.profile-id{font-size:15px;color:#aaa;margin-top:7px}
+.profile-stats{display:flex;justify-content:space-around;width:100%;padding:20px 0;margin-top:25px;border-top:1px solid #333;border-bottom:1px solid #333}
+.profile-stats b{display:block;font-size:18px}
+.bottom-nav{position:absolute;bottom:0;width:100%;height:55px;background:#000;border-top:1px solid #222;display:flex;justify-content:space-around;align-items:center;z-index:100}
+.nav-item{background:none;border:none;color:#888;display:flex;flex-direction:column;align-items:center;font-size:11px}
+.nav-item.active{color:white}
+.nav-icon{font-size:20px}
+.plus-btn{width:45px;height:30px;border:0;border-radius:8px;color:white;font-size:24px;font-weight:bold;background:linear-gradient(135deg,#25f4ee,#fe2c55)}
+.camera-screen{position:absolute;inset:0;background:#000;z-index:200;display:none;flex-direction:column;justify-content:space-between;padding:18px}
+#liveCamera{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1}
+.camera-header,.camera-footer,.camera-modes,.record-status{position:relative;z-index:10}
+.camera-header{display:flex;justify-content:space-between;align-items:center}
+.camera-header button{background:#222a;color:white;border:0;border-radius:30px;padding:10px 15px;font-size:20px}
+.camera-modes{display:flex;justify-content:center;gap:20px;align-items:center;margin-top:auto;margin-bottom:15px}
+.camera-modes button{background:none;border:0;color:#ddd;font-size:15px;padding:8px}
+.camera-modes button.selected{background:white;color:#111;border-radius:20px;font-weight:bold}
+.camera-footer{display:flex;justify-content:space-between;align-items:center;padding-bottom:15px}
+.gallery-box{width:55px;height:55px;background:#222b;border:2px solid white;border-radius:10px;display:flex;justify-content:center;align-items:center;font-size:25px}
+.shutter{width:75px;height:75px;border-radius:50%;background:white;border:5px solid #aaa}
+.upload-red-btn{background:#fe2c55;color:white;border:0;border-radius:25px;padding:14px 20px;font-size:15px;font-weight:bold;display:none}
+#fileInput{display:none}
+#previewModal{position:absolute;inset:0;background:#090909;z-index:300;display:none;flex-direction:column;padding:16px;overflow:auto}
+.preview-top{display:flex;justify-content:space-between;align-items:center}
+.preview-top button{background:#333;color:white;border:0;padding:10px 15px;border-radius:20px}
+#previewArea{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+.preview-item{position:relative;background:#222;border-radius:10px;overflow:hidden;min-height:130px}
+.preview-item img,.preview-item video{width:100%;height:180px;object-fit:contain;background:#000}
+.preview-item span{display:block;padding:5px;font-size:11px;color:#ddd;overflow:hidden}
+#caption{width:100%;padding:14px;margin-top:15px;background:#222;color:white;border:1px solid #555;border-radius:10px;font-size:16px;resize:vertical;min-height:65px}
+#uploadSelected{width:100%;padding:16px;background:#fe2c55;color:white;border:0;border-radius:30px;font-size:19px;font-weight:bold;margin-top:15px}
+#uploadSelected:disabled{opacity:.5}
+.small-hint{font-size:12px;color:#aaa;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="app-container">
+
+<div class="screen active" id="homeScreen">
+ <div class="video-feed" id="videoBox">
+  <div class="top-nav"><div class="for-you-text">For You</div></div>
+  <div class="empty-placeholder" id="emptyText">
+   কোনো পোস্ট নেই।<br><br>নিচের + বাটনে চাপ দিন অথবা Gallery থেকে ছবি-ভিডিও নির্বাচন করুন।
+  </div>
+  <div id="mediaHolder" style="position:absolute;inset:0;display:none"></div>
+  <div class="video-info" id="videoInfoBox" style="display:none">
+   <h3 id="videoAuthor">Forhad B2K</h3>
+   <p id="videoDesc"></p>
+  </div>
+  <div class="right-actions" id="rightActions" style="display:none">
+   <button class="action-btn" id="likeBtn" onclick="toggleLike(event)">
+    <span class="icon">🤍</span><span id="likeCount">0</span>
+   </button>
+   <button class="action-btn" onclick="openCommentBox(event)">
+    <span class="icon">💬</span><span id="commentCount">0</span>
+   </button>
+   <button class="action-btn" onclick="saveCurrentPost(event)">
+    <span class="icon">💾</span><span>Save</span>
+   </button>
+   <button class="action-btn" onclick="openShareMenu(event)">
+    <span class="icon">↗</span><span>Share</span>
+   </button>
+  </div>
+  <div class="share-menu" id="shareMenu">
+   <button onclick="shareCurrentPost()">↗ পোস্ট শেয়ার করুন</button>
+   <button onclick="deleteVideo()">🗑️ পোস্ট ডিলিট করুন</button>
+   <button onclick="closeShareMenu()">বাতিল</button>
+  </div>
+  <div class="comment-box" id="commentBox">
+   <div style="display:flex;justify-content:space-between">
+    <b>কমেন্টস</b><span onclick="closeCommentBox()">✕</span>
+   </div>
+   <div class="comment-list" id="commentList"></div>
+   <div class="comment-input-area">
+    <input id="commentInput" placeholder="কমেন্ট লিখুন...">
+    <button onclick="addComment()">পোস্ট</button>
+   </div>
+  </div>
+ </div>
+</div>
+
+<div class="screen profile-screen" id="profileScreen">
+ <div class="avatar-circle">F</div>
+ <h2>Forhad B2K</h2>
+ <div class="profile-id">@forhadb2k</div>
+ <div class="profile-stats">
+  <div><b id="followingCount">1</b>Following</div>
+  <div><b id="followersCount">949</b>Followers</div>
+  <div><b id="profileLikes">0</b>Likes</div>
+ </div>
+ <p style="color:#aaa;margin-top:25px">Offline BanglaTokBD</p>
+</div>
+
+<div class="bottom-nav">
+ <button class="nav-item active" onclick="switchTab('home',this)">
+  <span class="nav-icon">🏠</span>Home
+ </button>
+ <button class="plus-btn" onclick="openCamera()">+</button>
+ <button class="nav-item" onclick="switchTab('profile',this)">
+  <span class="nav-icon">👤</span>Profile
+ </button>
+</div>
+
+<div class="camera-screen" id="cameraScreen">
+ <video id="liveCamera" autoplay playsinline muted></video>
+ <div class="camera-header">
+  <button onclick="closeCamera()">✕</button>
+  <b>Offline BanglaTokBD</b>
+  <button onclick="switchCamera()">🔄</button>
+ </div>
+ <div class="record-status" id="recordStatus">● REC 00:00 / 40:00</div>
+ <div class="camera-modes">
+  <button onclick="setCameraMode('photo',this)" class="selected">PHOTO</button>
+  <button onclick="setCameraMode('video',this)">VIDEO</button>
+ </div>
+ <div class="camera-footer">
+  <label class="gallery-box" onclick="openGallery()">▣</label>
+  <button class="shutter" id="shutterBtn" onclick="cameraAction()"></button>
+  <button class="upload-red-btn" id="uploadBtn" onclick="openPreview()">Upload</button>
+ </div>
+ <input type="file" id="fileInput" accept="image/*,video/*" multiple>
+</div>
+
+<div id="previewModal">
+ <div class="preview-top">
+  <h2>আপনার মিডিয়া</h2>
+  <button onclick="closePreview()">✕ বন্ধ</button>
+ </div>
+ <div class="small-hint" id="selectionCount"></div>
+ <div id="previewArea"></div>
+ <textarea id="caption" placeholder="ক্যাপশন লিখুন..."></textarea>
+ <button id="uploadSelected" onclick="startUpload()">⬆ Upload</button>
+ <div class="small-hint">আপনার নির্বাচিত ছবি ও ভিডিও এই ডিভাইসে সংরক্ষিত হবে।</div>
+</div>
+
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+
+let db=null;
+let posts=[];
+let currentIndex=0;
+let currentVideoURL=null;
+let cameraStream=null;
+let cameraFacing='user';
+let cameraMode='photo';
+let selectedFiles=[];
+let recorder=null;
+let recordedChunks=[];
+let recordingTimer=null;
+let recordingSeconds=0;
+let isRecording=false;
+let isPaused=false;
+let savedURLs=[];
+
+const MAX_RECORD_SECONDS=40*60;
+
+function openDatabase(){
+ return new Promise((resolve,reject)=>{
+  const request=indexedDB.open('ForhadOfflineAppDB',2);
+  request.onupgradeneeded=e=>{
+   const database=e.target.result;
+   if(!database.objectStoreNames.contains('videos')){
+    database.createObjectStore('videos');
+   }
+   if(!database.objectStoreNames.contains('posts')){
+    database.createObjectStore('posts',{keyPath:'id',autoIncrement:true});
+   }
+  };
+  request.onsuccess=e=>{
+   db=e.target.result;
+   resolve(db);
+  };
+  request.onerror=()=>reject(request.error);
+ });
+}
+
+function dbAddPost(post){
+ return new Promise((resolve,reject)=>{
+  const tx=db.transaction('posts','readwrite');
+  const req=tx.objectStore('posts').add(post);
+  req.onsuccess=()=>post.id=req.result;
+  tx.oncomplete=()=>resolve(post);
+  tx.onerror=()=>reject(tx.error);
+ });
+}
+
+function dbUpdatePost(post){
+ return new Promise((resolve,reject)=>{
+  const tx=db.transaction('posts','readwrite');
+  tx.objectStore('posts').put(post);
+  tx.oncomplete=resolve;
+  tx.onerror=()=>reject(tx.error);
+ });
+}
+
+function dbDeletePost(id){
+ return new Promise((resolve,reject)=>{
+  const tx=db.transaction('posts','readwrite');
+  tx.objectStore('posts').delete(id);
+  tx.oncomplete=resolve;
+  tx.onerror=()=>reject(tx.error);
+ });
+}
+
+function getAllPosts(){
+ return new Promise((resolve,reject)=>{
+  const tx=db.transaction('posts','readonly');
+  const req=tx.objectStore('posts').getAll();
+  req.onsuccess=()=>resolve(req.result||[]);
+  req.onerror=()=>reject(req.error);
+ });
+}
+
+async function loadPosts(){
+ posts=await getAllPosts();
+ posts.sort((a,b)=>b.date-a.date);
+ if(posts.length){
+  currentIndex=0;
+  renderCurrentPost();
+ }else{
+  showEmpty();
+ }
+ updateProfileLikes();
+}
+
+function showEmpty(){
+ $('emptyText').style.display='block';
+ $('mediaHolder').style.display='none';
+ $('mediaHolder').innerHTML='';
+ $('videoInfoBox').style.display='none';
+ $('rightActions').style.display='none';
+ $('shareMenu').style.display='none';
+ $('commentBox').style.display='none';
+}
+
+function renderCurrentPost(){
+ if(!posts.length){showEmpty();return;}
+ if(currentIndex<0)currentIndex=0;
+ if(currentIndex>=posts.length)currentIndex=posts.length-1;
+
+ const post=posts[currentIndex];
+ $('emptyText').style.display='none';
+ $('mediaHolder').style.display='block';
+ $('mediaHolder').innerHTML='';
+
+ if(currentVideoURL){
+  URL.revokeObjectURL(currentVideoURL);
+  currentVideoURL=null;
+ }
+
+ const url=URL.createObjectURL(post.file);
+ currentVideoURL=url;
+
+ let media;
+ if(post.type.startsWith('video/')){
+  media=document.createElement('video');
+  media.loop=true;
+  media.autoplay=true;
+  media.playsInline=true;
+  media.controls=false;
+  media.onclick=togglePlayPause;
+ }else{
+  media=document.createElement('img');
+ }
+
+ media.className='post-media';
+ media.src=url;
+ $('mediaHolder').appendChild(media);
+
+ $('videoInfoBox').style.display='block';
+ $('rightActions').style.display='flex';
+ $('videoDesc').textContent=post.caption||'';
+ $('likeCount').textContent=post.likes||0;
+ $('commentCount').textContent=(post.comments||[]).length;
+
+ const likeBtn=$('likeBtn');
+ likeBtn.classList.toggle('liked',!!post.liked);
+ likeBtn.querySelector('.icon').textContent=post.liked?'❤️':'🤍';
+
+ renderComments();
+ updateProfileLikes();
+}
+
+function currentPost(){
+ return posts[currentIndex]||null;
+}
+
+function movePost(direction){
+ if(!posts.length)return;
+ currentIndex=(currentIndex+direction+posts.length)%posts.length;
+ renderCurrentPost();
+}
+
+function togglePlayPause(){
+ const media=$('mediaHolder').querySelector('video');
+ if(!media)return;
+ if(media.paused)media.play().catch(()=>{});
+ else media.pause();
+}
+
+function switchTab(tab,btn){
+ $('homeScreen').classList.toggle('active',tab==='home');
+ $('profileScreen').classList.toggle('active',tab==='profile');
+ document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+ btn.classList.add('active');
+}
+
+async function toggleLike(event){
+ event.stopPropagation();
+ const post=currentPost();
+ if(!post)return;
+ post.liked=!post.liked;
+ post.likes=Math.max(0,(post.likes||0)+(post.liked?1:-1));
+ await dbUpdatePost(post);
+ $('likeBtn').classList.toggle('liked',post.liked);
+ $('likeBtn').querySelector('.icon').textContent=post.liked?'❤️':'🤍';
+ $('likeCount').textContent=post.likes;
+ updateProfileLikes();
+}
+
+function updateProfileLikes(){
+ const total=posts.reduce((sum,p)=>sum+(p.likes||0),0);
+ $('profileLikes').textContent=total;
+}
+
+function openCommentBox(event){
+ event.stopPropagation();
+ if(!currentPost())return;
+ $('commentBox').style.display='flex';
+ renderComments();
+}
+
+function closeCommentBox(){
+ $('commentBox').style.display='none';
+}
+
+function renderComments(){
+ const list=$('commentList');
+ list.innerHTML='';
+ const post=currentPost();
+ if(!post)return;
+ (post.comments||[]).forEach(comment=>{
+  const p=document.createElement('p');
+  p.style.cssText='padding:9px;border-bottom:1px solid #333';
+  p.textContent='👤 '+comment;
+  list.appendChild(p);
+ });
+ $('commentCount').textContent=(post.comments||[]).length;
+}
+
+async function addComment(){
+ const input=$('commentInput');
+ const value=input.value.trim();
+ const post=currentPost();
+ if(!value||!post)return;
+ if(!post.comments)post.comments=[];
+ post.comments.push(value);
+ await dbUpdatePost(post);
+ input.value='';
+ renderComments();
+}
+</script>
+
+<script>
+function openShareMenu(event){
+ event.stopPropagation();
+ if(!currentPost())return;
+ $('shareMenu').style.display='flex';
+}
+
+function closeShareMenu(){
+ $('shareMenu').style.display='none';
+}
+
+async function shareCurrentPost(){
+ const post=currentPost();
+ if(!post)return;
+
+ try{
+  const file=new File([post.file],`BanglaTokBD_${post.id}`,{type:post.type});
+  if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+   await navigator.share({files:[file],title:'Offline BanglaTokBD',text:post.caption||''});
+  }else if(navigator.share){
+   await navigator.share({title:'Offline BanglaTokBD',text:post.caption||'আমার পোস্ট'});
+  }else{
+   alert('এই ব্রাউজারে Share সুবিধা নেই।');
+  }
+ }catch(e){}
+ closeShareMenu();
+}
+
+async function saveCurrentPost(event){
+ if(event)event.stopPropagation();
+ const post=currentPost();
+ if(!post)return;
+
+ try{
+  const a=document.createElement('a');
+  const url=URL.createObjectURL(post.file);
+  a.href=url;
+  a.download=`BanglaTokBD_${post.id}`;
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+ }catch(e){
+  alert('ফাইল সেভ করা যায়নি।');
+ }
+}
+
+async function deleteVideo(){
+ const post=currentPost();
+ if(!post)return;
+ if(!confirm('আপনি কি এই পোস্টটি ডিলিট করতে চান?'))return;
+
+ await dbDeletePost(post.id);
+ closeShareMenu();
+ posts.splice(currentIndex,1);
+
+ if(currentIndex>=posts.length)currentIndex=posts.length-1;
+ if(posts.length)renderCurrentPost();
+ else showEmpty();
+
+ updateProfileLikes();
+}
+
+function openCamera(){
+ $('cameraScreen').style.display='flex';
+ $('uploadBtn').style.display='none';
+ $('fileInput').value='';
+ selectedFiles=[];
+ startLiveCamera();
+}
+
+async function startLiveCamera(){
+ try{
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+   throw new Error('Camera API unavailable');
+  }
+
+  if(cameraStream){
+   cameraStream.getTracks().forEach(t=>t.stop());
+   cameraStream=null;
+  }
+
+  cameraStream=await navigator.mediaDevices.getUserMedia({
+   video:{facingMode:cameraFacing},
+   audio:true
+  });
+
+  $('liveCamera').srcObject=cameraStream;
+  await $('liveCamera').play().catch(()=>{});
+ }catch(error){
+  alert('ক্যামেরা চালু হয়নি। Chrome-এ HTTPS/localhost ব্যবহার করুন এবং Camera ও Microphone Permission দিন।');
+ }
+}
+
+async function switchCamera(){
+ if(isRecording){
+  alert('রেকর্ডিং চলাকালে ক্যামেরা পরিবর্তন করা যাবে না।');
+  return;
+ }
+ cameraFacing=cameraFacing==='user'?'environment':'user';
+ await startLiveCamera();
+}
+
+function setCameraMode(mode,button){
+ if(isRecording)return;
+ cameraMode=mode;
+ document.querySelectorAll('.camera-modes button').forEach(b=>b.classList.remove('selected'));
+ button.classList.add('selected');
+ $('shutterBtn').style.background=mode==='photo'?'white':'#fe3155';
+}
+
+function openGallery(){
+ $('fileInput').click();
+}
+
+$('fileInput').addEventListener('change',event=>{
+ const files=Array.from(event.target.files||[]);
+ if(!files.length)return;
+
+ selectedFiles=files.filter(f=>
+  f.type.startsWith('image/')||f.type.startsWith('video/')
+ );
+
+ if(!selectedFiles.length){
+  alert('শুধু ছবি অথবা ভিডিও নির্বাচন করুন।');
+  return;
+ }
+
+ $('uploadBtn').style.display='block';
+ $('fileInput').value='';
+ openPreview();
+});
+
+function cameraAction(){
+ if(cameraMode==='photo'){
+  capturePhoto();
+ }else{
+  if(!isRecording)startRecording();
+  else if(isPaused)resumeRecording();
+  else pauseRecording();
+ }
+}
+
+function capturePhoto(){
+ const camera=$('liveCamera');
+ if(!cameraStream||!camera.videoWidth){
+  alert('প্রথমে লাইভ ক্যামেরা চালু করুন।');
+  return;
+ }
+
+ const canvas=document.createElement('canvas');
+ canvas.width=camera.videoWidth;
+ canvas.height=camera.videoHeight;
+ canvas.getContext('2d').drawImage(camera,0,0);
+
+ canvas.toBlob(blob=>{
+  if(!blob){alert('ছবি তোলা যায়নি।');return;}
+  const file=new File([blob],`BanglaTokBD_${Date.now()}.jpg`,{type:'image/jpeg'});
+  selectedFiles=[file];
+  $('uploadBtn').style.display='block';
+  openPreview();
+ },'image/jpeg',0.92);
+}
+
+function startRecording(){
+ if(!cameraStream){
+  alert('ক্যামেরা চালু করুন।');
+  return;
+ }
+
+ if(!window.MediaRecorder){
+  alert('এই ব্রাউজারে ভিডিও রেকর্ডিং সমর্থিত নয়।');
+  return;
+ }
+
+ recordedChunks=[];
+ recordingSeconds=0;
+
+ let options={};
+ if(MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')){
+  options.mimeType='video/webm;codecs=vp8,opus';
+ }else if(MediaRecorder.isTypeSupported('video/webm')){
+  options.mimeType='video/webm';
+ }
+
+ try{
+  recorder=new MediaRecorder(cameraStream,options);
+ }catch(e){
+  alert('রেকর্ডার চালু করা যায়নি।');
+  return;
+ }
+
+ recorder.ondataavailable=e=>{
+  if(e.data&&e.data.size>0)recordedChunks.push(e.data);
+ };
+
+ recorder.onstop=()=>{
+  const type=recorder.mimeType||'video/webm';
+  const blob=new Blob(recordedChunks,{type});
+  const ext=type.includes('mp4')?'mp4':'webm';
+  const file=new File([blob],`BanglaTokBD_${Date.now()}.${ext}`,{type});
+  selectedFiles=[file];
+  $('uploadBtn').style.display='block';
+  $('recordStatus').style.display='none';
+  $('shutterBtn').style.background='white';
+  isRecording=false;
+  isPaused=false;
+  openPreview();
+ };
+
+ recorder.start(1000);
+ isRecording=true;
+ isPaused=false;
+ $('recordStatus').style.display='block';
+ $('shutterBtn').style.background='#ff3155';
+ updateRecordTimer();
+
+ recordingTimer=setInterval(()=>{
+  if(!isPaused){
+   recordingSeconds++;
+   updateRecordTimer();
+
+   if(recordingSeconds>=MAX_RECORD_SECONDS){
+    stopRecording();
+    alert('সর্বোচ্চ ৪০ মিনিট রেকর্ডিং সম্পন্ন হয়েছে।');
+   }
+  }
+ },1000);
+}
+
+function updateRecordTimer(){
+ const min=String(Math.floor(recordingSeconds/60)).padStart(2,'0');
+ const sec=String(recordingSeconds%60).padStart(2,'0');
+ $('recordStatus').textContent=(isPaused?'Ⅱ PAUSED ':'● REC ')+min+':'+sec+' / 40:00';
+}
+
+function pauseRecording(){
+ if(recorder&&recorder.state==='recording'){
+  recorder.pause();
+  isPaused=true;
+  updateRecordTimer();
+ }
+}
+
+function resumeRecording(){
+ if(recorder&&recorder.state==='paused'){
+  recorder.resume();
+  isPaused=false;
+  updateRecordTimer();
+ }
+}
+
+function stopRecording(){
+ if(recorder&&recorder.state!=='inactive'){
+  clearInterval(recordingTimer);
+  recorder.stop();
+ }
+}
+
+function openPreview(){
+ if(!selectedFiles.length)return;
+
+ $('previewModal').style.display='flex';
+ $('previewArea').innerHTML='';
+ $('selectionCount').textContent=selectedFiles.length+'টি ফাইল নির্বাচন করা হয়েছে';
+
+ selectedFiles.forEach((file,index)=>{
+  const item=document.createElement('div');
+  item.className='preview-item';
+
+  const url=URL.createObjectURL(file);
+  savedURLs.push(url);
+
+  let media;
+  if(file.type.startsWith('video/')){
+   media=document.createElement('video');
+   media.controls=true;
+   media.playsInline=true;
+  }else{
+   media=document.createElement('img');
+  }
+
+  media.src=url;
+  const name=document.createElement('span');
+  name.textContent=(index+1)+'. '+file.name;
+
+  item.append(media,name);
+  $('previewArea').appendChild(item);
+ });
+
+ $('uploadSelected').disabled=false;
+}
+
+function closePreview(){
+ $('previewModal').style.display='none';
+ $('previewArea').innerHTML='';
+ savedURLs.forEach(url=>URL.revokeObjectURL(url));
+ savedURLs=[];
+}
+
+async function startUpload(){
+ if(!selectedFiles.length){
+  alert('আগে ছবি অথবা ভিডিও নির্বাচন করুন।');
+  return;
+ }
+
+ if(!db){
+  alert('ডেটাবেস প্রস্তুত হয়নি।');
+  return;
+ }
+
+ const button=$('uploadSelected');
+ button.disabled=true;
+ button.textContent='সংরক্ষণ হচ্ছে...';
+
+ const caption=$('caption').value.trim();
+
+ try{
+  for(const file of selectedFiles){
+   if(!file.type.startsWith('image/')&&!file.type.startsWith('video/'))continue;
+
+   await dbAddPost({
+    file:file,
+    type:file.type,
+    caption:caption,
+    date:Date.now(),
+    likes:0,
+    liked:false,
+    comments:[]
+   });
+  }
+
+  selectedFiles=[];
+  $('caption').value='';
+  closePreview();
+  closeCamera();
+  await loadPosts();
+
+  $('homeScreen').classList.add('active');
+  $('profileScreen').classList.remove('active');
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.querySelector('.nav-item').classList.add('active');
+
+  alert('আপনার পোস্ট সফলভাবে সংরক্ষিত হয়েছে!');
+ }catch(error){
+  console.error(error);
+  alert('সংরক্ষণ করা যায়নি। ফোনের স্টোরেজ খালি আছে কি না দেখুন।');
+ }finally{
+  button.disabled=false;
+  button.textContent='⬆ Upload';
+ }
+}
+
+function closeCamera(){
+ if(isRecording)stopRecording();
+ clearInterval(recordingTimer);
+
+ if(cameraStream){
+  cameraStream.getTracks().forEach(t=>t.stop());
+  cameraStream=null;
+ }
+
+ $('liveCamera').srcObject=null;
+ $('cameraScreen').style.display='none';
+ $('recordStatus').style.display='none';
+ $('uploadBtn').style.display='none';
+ isRecording=false;
+ isPaused=false;
+}
+
+window.addEventListener('load',async()=>{
+ try{
+  await openDatabase();
+  await migrateOldVideo();
+  await loadPosts();
+ }catch(error){
+  console.error(error);
+  alert('ডাটাবেস চালু করা যায়নি।');
+ }
+});
+
+let touchStartY=0;
+$('videoBox').addEventListener('touchstart',e=>{
+ touchStartY=e.touches[0].clientY;
+},{passive:true});
+
+$('videoBox').addEventListener('touchend',e=>{
+ if($('shareMenu').style.display==='flex'||$('commentBox').style.display==='flex')return;
+ const diff=touchStartY-e.changedTouches[0].clientY;
+ if(Math.abs(diff)>70)movePost(diff>0?1:-1);
+},{passive:true});
+
+async function migrateOldVideo(){
+ if(!db)return;
+ const existing=await getAllPosts();
+ if(existing.length)return;
+
+ return new Promise(resolve=>{
+  const tx=db.transaction('videos','readonly');
+  const req=tx.objectStore('videos').get('savedVideo');
+  req.onsuccess=async()=>{
+   const file=req.result;
+   if(file){
+    try{
+     await dbAddPost({
+      file:file,
+      type:file.type||'video/mp4',
+      caption:'আগের সংরক্ষিত ভিডিও',
+      date:Date.now(),
+      likes:0,
+      liked:false,
+      comments:[]
+     });
+    }catch(e){}
+   }
+   resolve();
+  };
+  req.onerror=()=>resolve();
+ });
+}
+</script>
+</body>
+</html>
